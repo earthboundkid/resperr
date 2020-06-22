@@ -81,6 +81,11 @@ func WithUserMessage(err error, msg string) error {
 	return messenger{err, msg}
 }
 
+// WithUserMessagef calls fmt.Sprintf before calling WithUserMessage.
+func WithUserMessagef(err error, format string, v ...interface{}) error {
+	return WithUserMessage(err, fmt.Sprintf(format, v...))
+}
+
 // UserMessage returns the user message associated with an error.
 // If no message is found, it checks StatusCode and returns that message.
 // Because the default status is 500, the default message is

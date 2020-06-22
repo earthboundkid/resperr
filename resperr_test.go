@@ -116,6 +116,14 @@ func TestSetMsg(t *testing.T) {
 	})
 }
 
+func TestMsgf(t *testing.T) {
+	msg := "hello 1, 2, 3"
+	err := resperr.WithUserMessagef(nil, "hello %d, %d, %d", 1, 2, 3)
+	if got := resperr.UserMessage(err); msg != got {
+		t.Errorf("%q != %q", got, msg)
+	}
+}
+
 func TestNotFound(t *testing.T) {
 	path := "/example/url"
 	r, _ := http.NewRequest(http.MethodGet, path, nil)

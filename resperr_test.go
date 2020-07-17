@@ -1,6 +1,7 @@
 package resperr_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -23,6 +24,7 @@ func TestGetCode(t *testing.T) {
 		"set":     {resperr.WithStatusCode(errors.New(""), 3), 3},
 		"set-nil": {resperr.WithStatusCode(nil, 4), 4},
 		"wrapped": {wrapped, 5},
+		"context": {context.DeadlineExceeded, 504},
 	}
 
 	for name, tc := range testCases {
@@ -59,6 +61,14 @@ func TestSetCode(t *testing.T) {
 		coder := resperr.WithStatusCode(nil, 400)
 		if msg := coder.Error(); !strings.Contains(msg, http.StatusText(400)) {
 			t.Errorf("message should contain text: %q", msg)
+		}
+	})
+	t.Run("override-default", func(t *testing.T) {
+		err := context.DeadlineExceeded
+		coder := resperr.WithStatusCode(err, 3)
+
+		if code := resperr.StatusCode(coder); code != 3 {
+			t.Errorf("did not override code %d != 3", code)
 		}
 	})
 }

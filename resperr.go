@@ -42,6 +42,9 @@ func WithStatusCode(err error, code int) error {
 
 // StatusCode returns the status code associated with an error.
 // If no status code is found, it returns 500 http.StatusInternalServerError.
+// As a special case, it checks for Timeout() and Temporary() errors and returns
+// 504 http.StatusGatewayTimeout and 503 http.StatusServiceUnavailable
+// respectively.
 // If err is nil, it returns 200 http.StatusOK.
 func StatusCode(err error) (code int) {
 	if err == nil {
@@ -49,6 +52,20 @@ func StatusCode(err error) (code int) {
 	}
 	if sc := StatusCoder(nil); errors.As(err, &sc) {
 		return sc.StatusCode()
+	}
+	var timeouter interface {
+		error
+		Timeout() bool
+	}
+	if errors.As(err, &timeouter) && timeouter.Timeout() {
+		return http.StatusGatewayTimeout
+	}
+	var temper interface {
+		error
+		Temporary() bool
+	}
+	if errors.As(err, &temper) && temper.Temporary() {
+		return http.StatusServiceUnavailable
 	}
 	return http.StatusInternalServerError
 }

@@ -148,3 +148,36 @@ func TestNotFound(t *testing.T) {
 		t.Errorf("wrong code: %d", code)
 	}
 }
+
+func TestNew(t *testing.T) {
+	t.Run("flat", func(t *testing.T) {
+		err := resperr.New(404, "hello %s", "world")
+		if gotMsg := resperr.UserMessage(err); gotMsg != "Not Found" {
+			t.Errorf("user message %q != %q", gotMsg, "")
+		}
+		if code := resperr.StatusCode(err); code != 404 {
+			t.Errorf("wrong code: %d", code)
+		}
+		if s := err.Error(); s != "[404] hello world" {
+			t.Errorf("wrong error string: %q", s)
+		}
+	})
+	t.Run("chain", func(t *testing.T) {
+		const setMsg = "msg1"
+		inner := resperr.WithUserMessage(nil, setMsg)
+		w1 := resperr.New(5, "w1: %w", inner)
+		w2 := resperr.New(6, "w2: %w", w1)
+		if gotMsg := resperr.UserMessage(w2); gotMsg != setMsg {
+			t.Errorf("user message %q != %q", gotMsg, setMsg)
+		}
+		if code := resperr.StatusCode(w1); code != 5 {
+			t.Errorf("wrong code: %d", code)
+		}
+		if code := resperr.StatusCode(w2); code != 6 {
+			t.Errorf("wrong code: %d", code)
+		}
+		if s := w2.Error(); s != "[6] w2: [5] w1: msg1" {
+			t.Errorf("wrong error string: %q", s)
+		}
+	})
+}

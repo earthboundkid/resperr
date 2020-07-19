@@ -133,3 +133,11 @@ func NotFound(r *http.Request) error {
 		fmt.Sprintf("could not find path %q", r.URL.Path),
 	)
 }
+
+// New is a convenience function for calling fmt.Errorf and WithStatusCode.
+func New(code int, format string, v ...interface{}) error {
+	return WithStatusCode(
+		fmt.Errorf(format, v...),
+		code,
+	)
+}

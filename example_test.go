@@ -18,11 +18,23 @@ func Example() {
 	defer ts.Close()
 
 	printResponse(ts.URL, "?")
+	// logs: [403] bad user ""
+	// response: {"status":403,"message":"Forbidden"}
 	printResponse(ts.URL, "?user=admin")
+	// logs: [400] missing ?n= in query
+	// response: {"status":400,"message":"Please enter a number."}
 	printResponse(ts.URL, "?user=admin&n=x")
+	// logs: [400] strconv.Atoi: parsing "x": invalid syntax
+	// response: {"status":400,"message":"Input is not a number."}
 	printResponse(ts.URL, "?user=admin&n=1")
+	// logs: [404] 1 not found
+	// response: {"status":404,"message":"Not Found"}
 	printResponse(ts.URL, "?user=admin&n=2")
+	// logs: could not connect to database (X_X)
+	// response: {"status":500,"message":"Internal Server Error"}
 	printResponse(ts.URL, "?user=admin&n=3")
+	// response: {"data":"data 3"}
+
 	// Output:
 	// logged   ?: [403] bad user ""
 	// response ?: {"status":403,"message":"Forbidden"}
@@ -106,12 +118,19 @@ func getItemNoFromRequest(r *http.Request) (int, error) {
 }
 
 func hasPermissions(r *http.Request) error {
+	// lol, don't do this!
 	user := r.URL.Query().Get("user")
 	if user == "admin" {
 		return nil
 	}
 	return resperr.New(http.StatusForbidden,
 		"bad user %q", user)
+}
+
+// boilerplate below:
+
+type Item struct {
+	Data string `json:"data"`
 }
 
 func dbCall(s string, i int) (*Item, error) {
@@ -122,10 +141,6 @@ func dbCall(s string, i int) (*Item, error) {
 		return nil, fmt.Errorf("could not connect to database (X_X)")
 	}
 	return &Item{fmt.Sprintf("data %d", i)}, nil
-}
-
-type Item struct {
-	Data string `json:"data"`
 }
 
 func logError(w http.ResponseWriter, r *http.Request, err error) {

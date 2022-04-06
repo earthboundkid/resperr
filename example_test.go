@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -170,6 +170,6 @@ func printResponse(base, u string) {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	fmt.Printf("response %s: %s\n", u, b)
 }

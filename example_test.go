@@ -147,7 +147,7 @@ func logError(w http.ResponseWriter, r *http.Request, err error) {
 	fmt.Printf("logged   ?%s: %v\n", r.URL.RawQuery, err)
 }
 
-func replyJSON(w http.ResponseWriter, r *http.Request, statusCode int, data interface{}) {
+func replyJSON(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		logError(w, r, err)

@@ -14,9 +14,18 @@ func ExampleValidator() {
 	var v resperr.Validator
 	v.Ensure("heads", 2 < 1, "Two are better than one.")
 	v.Ensure("heads", !true, "I win, tails you lose.")
-	fmt.Println(v.Err())
+	err := v.Err()
+
+	fmt.Println(resperr.StatusCode(err))
+	for field, msgs := range resperr.ValidationErrors(err) {
+		for _, msg := range msgs {
+			fmt.Println(field, "=", msg)
+		}
+	}
 	// Output:
-	// validation error: heads=Two are better than one. heads=I win, tails you lose.
+	// 400
+	// heads = Two are better than one.
+	// heads = I win, tails you lose.
 }
 
 func ExampleValidator_EnsureIf() {

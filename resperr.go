@@ -99,7 +99,7 @@ func WithUserMessage(err error, msg string) error {
 }
 
 // WithUserMessagef calls fmt.Sprintf before calling WithUserMessage.
-func WithUserMessagef(err error, format string, v ...interface{}) error {
+func WithUserMessagef(err error, format string, v ...any) error {
 	return WithUserMessage(err, fmt.Sprintf(format, v...))
 }
 
@@ -135,7 +135,7 @@ func NotFound(r *http.Request) error {
 }
 
 // New is a convenience function for calling fmt.Errorf and WithStatusCode.
-func New(code int, format string, v ...interface{}) error {
+func New(code int, format string, v ...any) error {
 	return WithStatusCode(
 		fmt.Errorf(format, v...),
 		code,

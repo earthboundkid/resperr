@@ -19,12 +19,14 @@ func TestGetCode(t *testing.T) {
 		error
 		int
 	}{
-		"nil":     {nil, 200},
-		"default": {errors.New(""), 500},
-		"set":     {resperr.WithStatusCode(errors.New(""), 3), 3},
-		"set-nil": {resperr.WithStatusCode(nil, 4), 4},
-		"wrapped": {wrapped, 5},
-		"context": {context.DeadlineExceeded, 504},
+		"nil":         {nil, 200},
+		"default":     {errors.New(""), 500},
+		"set":         {resperr.WithStatusCode(errors.New(""), 3), 3},
+		"set-nil":     {resperr.WithStatusCode(nil, 4), 4},
+		"wrapped":     {wrapped, 5},
+		"set-message": {resperr.WithUserMessage(nil, "xxx"), 400},
+		"set-both":    {resperr.WithCodeAndMessage(nil, 6, "xx"), 6},
+		"context":     {context.DeadlineExceeded, 504},
 	}
 
 	for name, tc := range testCases {

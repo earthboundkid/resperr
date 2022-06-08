@@ -102,7 +102,7 @@ func (msgr messenger) StatusCode() int {
 // Unlike pkg/errors, WithUserMessage will wrap nil error.
 func WithUserMessage(err error, msg string) error {
 	if err == nil {
-		err = errors.New(msg)
+		err = errors.New("UserMessage<" + msg + ">")
 	}
 	return messenger{err, msg}
 }

@@ -96,7 +96,7 @@ func TestSetMsg(t *testing.T) {
 	})
 	t.Run("set-nil", func(t *testing.T) {
 		msgr := resperr.WithUserMessage(nil, "a")
-		be.Equal(t, "a", msgr.Error())
+		be.Equal(t, "UserMessage<a>", msgr.Error())
 	})
 }
 
@@ -130,6 +130,6 @@ func TestNew(t *testing.T) {
 		be.Equal(t, setMsg, resperr.UserMessage(w2))
 		be.Equal(t, 5, resperr.StatusCode(w1))
 		be.Equal(t, 6, resperr.StatusCode(w2))
-		be.Equal(t, "[6] w2: [5] w1: msg1", w2.Error())
+		be.Equal(t, "[6] w2: [5] w1: UserMessage<msg1>", w2.Error())
 	})
 }

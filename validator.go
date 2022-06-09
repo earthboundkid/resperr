@@ -11,25 +11,31 @@ import (
 // Validator creates a map of fields to error messages.
 type Validator url.Values
 
-// Ensure adds the provided message to field if cond is not met.
-// Ensure works with the zero value of Validator.
-func (v *Validator) Ensure(field string, cond bool, message string, a ...any) {
-	if cond {
-		return
-	}
+// Add the provided message to field values.
+// Add works with the zero value of Validator.
+func (v *Validator) Add(field string, message string, a ...any) {
 	if *v == nil {
 		*v = make(Validator)
 	}
 	(*url.Values)(v).Add(field, fmt.Sprintf(message, a...))
 }
 
-// EnsureIf adds the provided message to field if cond is not met and the field does not already have a validation message.
-// EnsureIf works with the zero value of Validator.
-func (v *Validator) EnsureIf(field string, cond bool, message string, a ...any) {
+// AddIf adds the provided message to field if cond is true.
+// AddIf works with the zero value of Validator.
+func (v *Validator) AddIf(field string, cond bool, message string, a ...any) {
+	if !cond {
+		return
+	}
+	v.Add(field, message, a...)
+}
+
+// AddIfUnset adds the provided message to field if cond is true and the field does not already have a validation message.
+// AddIfUnset works with the zero value of Validator.
+func (v *Validator) AddIfUnset(field string, cond bool, message string, a ...any) {
 	if len((*v)[field]) > 0 {
 		return
 	}
-	v.Ensure(field, cond, message, a...)
+	v.AddIf(field, cond, message, a...)
 }
 
 // Err transforms v to a ValidatorError if v is not empty.

@@ -8,9 +8,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 
-	"github.com/carlmjohnson/resperr"
+	"github.com/earthboundkid/resperr/v2"
 )
 
 func Example() {
@@ -19,33 +20,33 @@ func Example() {
 
 	printResponse(ts.URL, "?")
 	// logs: [403] bad user ""
-	// response: {"status":403,"message":"Forbidden"}
+	// response: {"status":403,"error":"Forbidden"}
 	printResponse(ts.URL, "?user=admin")
-	// logs: [400] missing ?n= in query
-	// response: {"status":400,"message":"Please enter a number."}
+	// logs: validation error: n=Please enter a number.
+	// response: {"status":400,"error":"Bad Request","details":{"n":["Please enter a number."]}}
 	printResponse(ts.URL, "?user=admin&n=x")
-	// logs: [400] strconv.Atoi: parsing "x": invalid syntax
-	// response: {"status":400,"message":"Input is not a number."}
+	// logs: validation error: n=Input is not a number.
+	// response: {"status":400,"error":"Bad Request","details":{"n":["Input is not a number."]}}
 	printResponse(ts.URL, "?user=admin&n=1")
 	// logs: [404] 1 not found
-	// response: {"status":404,"message":"Not Found"}
+	// response: {"status":404,"error":"Not Found"}
 	printResponse(ts.URL, "?user=admin&n=2")
 	// logs: could not connect to database (X_X)
-	// response: {"status":500,"message":"Internal Server Error"}
+	// response: {"status":500,"error":"Internal Server Error"}
 	printResponse(ts.URL, "?user=admin&n=3")
 	// response: {"data":"data 3"}
 
 	// Output:
 	// logged   ?: [403] bad user ""
-	// response ?: {"status":403,"message":"Forbidden"}
-	// logged   ?user=admin: [400] missing ?n= in query
-	// response ?user=admin: {"status":400,"message":"Please enter a number."}
-	// logged   ?user=admin&n=x: [400] strconv.Atoi: parsing "x": invalid syntax
-	// response ?user=admin&n=x: {"status":400,"message":"Input is not a number."}
+	// response ?: {"status":403,"error":"Forbidden"}
+	// logged   ?user=admin: validation error: n=Please enter a number.
+	// response ?user=admin: {"status":400,"error":"Bad Request","details":{"n":["Please enter a number."]}}
+	// logged   ?user=admin&n=x: validation error: n=Input is not a number.
+	// response ?user=admin&n=x: {"status":400,"error":"Bad Request","details":{"n":["Input is not a number."]}}
 	// logged   ?user=admin&n=1: [404] 1 not found
-	// response ?user=admin&n=1: {"status":404,"message":"Not Found"}
+	// response ?user=admin&n=1: {"status":404,"error":"Not Found"}
 	// logged   ?user=admin&n=2: could not connect to database (X_X)
-	// response ?user=admin&n=2: {"status":500,"message":"Internal Server Error"}
+	// response ?user=admin&n=2: {"status":500,"error":"Internal Server Error"}
 	// response ?user=admin&n=3: {"data":"data 3"}
 }
 
@@ -53,12 +54,15 @@ func replyError(w http.ResponseWriter, r *http.Request, err error) {
 	logError(w, r, err)
 	code := resperr.StatusCode(err)
 	msg := resperr.UserMessage(err)
+	details := resperr.ValidationErrors(err)
 	replyJSON(w, r, code, struct {
-		Status  int    `json:"status"`
-		Message string `json:"message"`
+		Status  int        `json:"status"`
+		Error   string     `json:"error,omitzero"`
+		Details url.Values `json:"details,omitzero"`
 	}{
 		code,
 		msg,
+		details,
 	})
 }
 
@@ -100,21 +104,12 @@ func getItemByNumber(n int) (item *Item, err error) {
 }
 
 func getItemNoFromRequest(r *http.Request) (int, error) {
+	var v resperr.Validator
 	ns := r.URL.Query().Get("n")
-	if ns == "" {
-		return 0, resperr.WithUserMessage(
-			resperr.New(
-				http.StatusBadRequest,
-				"missing ?n= in query"),
-			"Please enter a number.")
-	}
+	v.AddIf("n", ns == "", "Please enter a number.")
 	n, err := strconv.Atoi(ns)
-	if err != nil {
-		return 0, resperr.WithCodeAndMessage(
-			err, http.StatusBadRequest,
-			"Input is not a number.")
-	}
-	return n, nil
+	v.AddIfUnset("n", err != nil, "Input is not a number.")
+	return n, v.Err()
 }
 
 func hasPermissions(r *http.Request) error {
@@ -153,7 +148,7 @@ func replyJSON(w http.ResponseWriter, r *http.Request, statusCode int, data any)
 		logError(w, r, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		// Don't use replyJSON to write the error, due to possible loop
-		w.Write([]byte(`{"status": 500, "message": "Internal server error"}`))
+		w.Write([]byte(`{"status": 500, "error": "Internal server error"}`))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

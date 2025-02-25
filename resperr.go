@@ -14,32 +14,6 @@ type StatusCoder interface {
 	StatusCode() int
 }
 
-type statusCoder struct {
-	error
-	code int
-}
-
-func (sc statusCoder) Unwrap() error {
-	return sc.error
-}
-
-func (sc statusCoder) Error() string {
-	return fmt.Sprintf("[%d] %v", sc.code, sc.error)
-}
-
-func (sc statusCoder) StatusCode() int {
-	return sc.code
-}
-
-// WithStatusCode adds a StatusCoder to err's error chain.
-// Unlike pkg/errors, WithStatusCode will wrap nil error.
-func WithStatusCode(err error, code int) error {
-	if err == nil {
-		err = errors.New(http.StatusText(code))
-	}
-	return statusCoder{err, code}
-}
-
 // StatusCode returns the status code associated with an error.
 // If no status code is found, it returns 500 http.StatusInternalServerError.
 // As a special case, it checks for Timeout() and Temporary() errors and returns
@@ -76,42 +50,6 @@ type UserMessenger interface {
 	UserMessage() string
 }
 
-type messenger struct {
-	error
-	msg string
-}
-
-func (msgr messenger) Unwrap() error {
-	return msgr.error
-}
-
-func (msgr messenger) UserMessage() string {
-	return msgr.msg
-}
-
-func (msgr messenger) StatusCode() int {
-	if code := StatusCode(msgr.error); code != http.StatusInternalServerError {
-		return code
-	}
-	return http.StatusBadRequest
-}
-
-// WithUserMessage adds a UserMessenger to err's error chain.
-// If a status code has not previously been set,
-// a default status of Bad Request (400) is added.
-// Unlike pkg/errors, WithUserMessage will wrap nil error.
-func WithUserMessage(err error, msg string) error {
-	if err == nil {
-		err = errors.New("UserMessage<" + msg + ">")
-	}
-	return messenger{err, msg}
-}
-
-// WithUserMessagef calls fmt.Sprintf before calling WithUserMessage.
-func WithUserMessagef(err error, format string, v ...any) error {
-	return WithUserMessage(err, fmt.Sprintf(format, v...))
-}
-
 // UserMessage returns the user message associated with an error.
 // If no message is found, it checks StatusCode and returns that message.
 // Because the default status is 500, the default message is
@@ -127,26 +65,19 @@ func UserMessage(err error) string {
 	return http.StatusText(StatusCode(err))
 }
 
-// WithCodeAndMessage is a convenience function for calling both
-// WithStatusCode and WithUserMessage.
-func WithCodeAndMessage(err error, code int, msg string) error {
-	return WithStatusCode(WithUserMessage(err, msg), code)
-}
-
 // NotFound creates an error with a 404 status code and a user message
 // showing the request path that was not found.
 func NotFound(r *http.Request) error {
-	return WithCodeAndMessage(
-		nil,
-		http.StatusNotFound,
-		fmt.Sprintf("could not find path %q", r.URL.Path),
-	)
+	return E{
+		S: http.StatusNotFound,
+		M: fmt.Sprintf("could not find path %q", r.URL.Path),
+	}
 }
 
-// New is a convenience function for calling fmt.Errorf and WithStatusCode.
+// New is a convenience function for calling fmt.Errorf.
 func New(code int, format string, v ...any) error {
-	return WithStatusCode(
-		fmt.Errorf(format, v...),
-		code,
-	)
+	return E{
+		S: code,
+		E: fmt.Errorf(format, v...),
+	}
 }

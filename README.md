@@ -1,13 +1,13 @@
-# resperr [![GoDoc](https://godoc.org/github.com/carlmjohnson/resperr?status.svg)](https://godoc.org/github.com/carlmjohnson/resperr) [![Go Report Card](https://goreportcard.com/badge/github.com/carlmjohnson/resperr)](https://goreportcard.com/report/github.com/carlmjohnson/resperr) [![Calver v0.YY.Minor](https://img.shields.io/badge/calver-v0.YY.Minor-22bfda.svg)](https://calver.org)
+# resperr [![GoDoc](https://godoc.org/github.com/earthboundkid/resperr?status.svg)](https://godoc.org/github.com/earthboundkid/resperr/v2) [![Go Report Card](https://goreportcard.com/badge/github.com/earthboundkid/resperr/v2)](https://goreportcard.com/report/github.com/earthboundkid/resperr/v2) [![Calver v2.YY.Minor](https://img.shields.io/badge/calver-v2.YY.Minor-22bfda.svg)](https://calver.org)
 
 Resperr is a Go package to associate status codes and messages with errors.
 
 ## Example usage
 
-See [blog post](https://blog.carlmjohnson.net/post/2020/working-with-errors-as/) for a full description or [read the test code](https://github.com/carlmjohnson/resperr/blob/master/example_test.go) for more context:
+See [blog post](https://blog.carlana.net/post/2020/working-with-errors-as/) for a full description or [read the test code](https://github.com/earthboundkid/resperr/blob/master/example_test.go) for more context:
 
 ```go
-// write a simple handler that just checks for errors 
+// write a simple handler that just checks for errors
 // and replies with an error object if it gets one
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,21 +54,12 @@ func getItemByNumber(n int) (item *Item, err error) {
 // you can also return specific messages for users as needed
 
 func getItemNoFromRequest(r *http.Request) (int, error) {
+	var v resperr.Validator
 	ns := r.URL.Query().Get("n")
-	if ns == "" {
-		return 0, resperr.WithUserMessage(
-			resperr.New(
-				http.StatusBadRequest,
-				"missing ?n= in query"),
-			"Please enter a number.")
-	}
+	v.AddIf("n", ns == "", "Please enter a number.")
 	n, err := strconv.Atoi(ns)
-	if err != nil {
-		return 0, resperr.WithCodeAndMessage(
-			err, http.StatusBadRequest,
-			"Input is not a number.")
-	}
-	return n, nil
+	v.AddIfUnset("n", err != nil, "Input is not a number.")
+	return n, v.Err()
 }
 
 

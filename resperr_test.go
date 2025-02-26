@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/carlmjohnson/be"
-	"github.com/carlmjohnson/resperr"
+	"github.com/earthboundkid/resperr/v2"
 )
 
 func TestGetCode(t *testing.T) {
-	base := resperr.WithStatusCode(errors.New(""), 5)
+	base := resperr.E{S: 5}
 	wrapped := fmt.Errorf("wrapping: %w", base)
 
 	testCases := map[string]struct {
@@ -21,11 +21,11 @@ func TestGetCode(t *testing.T) {
 	}{
 		"nil":         {nil, 200},
 		"default":     {errors.New(""), 500},
-		"set":         {resperr.WithStatusCode(errors.New(""), 3), 3},
-		"set-nil":     {resperr.WithStatusCode(nil, 4), 4},
+		"set":         {resperr.E{E: errors.New(""), S: 3}, 3},
+		"set-nil":     {resperr.E{E: nil, S: 4}, 4},
 		"wrapped":     {wrapped, 5},
-		"set-message": {resperr.WithUserMessage(nil, "xxx"), 400},
-		"set-both":    {resperr.WithCodeAndMessage(nil, 6, "xx"), 6},
+		"set-message": {resperr.E{M: "xxx"}, 400},
+		"set-both":    {resperr.E{S: 6, M: "xx"}, 6},
 		"context":     {context.DeadlineExceeded, 504},
 	}
 
@@ -39,30 +39,30 @@ func TestGetCode(t *testing.T) {
 func TestSetCode(t *testing.T) {
 	t.Run("same-message", func(t *testing.T) {
 		err := errors.New("hello")
-		coder := resperr.WithStatusCode(err, 400)
+		coder := resperr.E{E: err, S: 400}
 		got := coder.Error()
 		want := "[400] " + err.Error()
 		be.Equal(t, want, got)
 	})
 	t.Run("keep-chain", func(t *testing.T) {
 		err := errors.New("hello")
-		coder := resperr.WithStatusCode(err, 3)
+		coder := resperr.E{E: err, S: 3}
 		be.True(t, errors.Is(coder, err))
 	})
 	t.Run("set-nil", func(t *testing.T) {
-		coder := resperr.WithStatusCode(nil, 400)
+		coder := resperr.E{S: 400}
 		be.In(t, http.StatusText(400), coder.Error())
 	})
 	t.Run("override-default", func(t *testing.T) {
 		err := context.DeadlineExceeded
-		coder := resperr.WithStatusCode(err, 3)
+		coder := resperr.E{E: err, S: 3}
 		code := resperr.StatusCode(coder)
 		be.Equal(t, 3, code)
 	})
 }
 
 func TestGetMsg(t *testing.T) {
-	base := resperr.WithUserMessage(errors.New(""), "5")
+	base := resperr.E{E: errors.New(""), M: "5"}
 	wrapped := fmt.Errorf("wrapping: %w", base)
 
 	testCases := map[string]struct {
@@ -71,8 +71,8 @@ func TestGetMsg(t *testing.T) {
 	}{
 		"nil":     {nil, ""},
 		"default": {errors.New(""), "Internal Server Error"},
-		"set":     {resperr.WithUserMessage(errors.New(""), "3"), "3"},
-		"set-nil": {resperr.WithUserMessage(nil, "4"), "4"},
+		"set":     {resperr.E{E: errors.New(""), M: "3"}, "3"},
+		"set-nil": {resperr.E{M: "4"}, "4"},
 		"wrapped": {wrapped, "5"},
 	}
 
@@ -84,25 +84,25 @@ func TestGetMsg(t *testing.T) {
 }
 
 func TestSetMsg(t *testing.T) {
-	t.Run("same-message", func(t *testing.T) {
+	t.Run("has-cause", func(t *testing.T) {
 		err := errors.New("hello")
-		msgr := resperr.WithUserMessage(err, "a")
-		be.Equal(t, err.Error(), msgr.Error())
+		msgr := resperr.E{E: err, M: "a"}
+		be.In(t, err.Error(), msgr.Error())
 	})
 	t.Run("keep-chain", func(t *testing.T) {
 		err := errors.New("hello")
-		msgr := resperr.WithUserMessage(err, "a")
+		msgr := resperr.E{E: err, M: "a"}
 		be.True(t, errors.Is(msgr, err))
 	})
-	t.Run("set-nil", func(t *testing.T) {
-		msgr := resperr.WithUserMessage(nil, "a")
-		be.Equal(t, "UserMessage<a>", msgr.Error())
+	t.Run("has-message", func(t *testing.T) {
+		msgr := resperr.E{M: "abc"}
+		be.In(t, "abc", msgr.Error())
 	})
 }
 
 func TestMsgf(t *testing.T) {
 	msg := "hello 1, 2, 3"
-	err := resperr.WithUserMessagef(nil, "hello %d, %d, %d", 1, 2, 3)
+	err := resperr.E{M: fmt.Sprintf("hello %d, %d, %d", 1, 2, 3)}
 	be.Equal(t, msg, resperr.UserMessage(err))
 }
 
@@ -124,12 +124,12 @@ func TestNew(t *testing.T) {
 	})
 	t.Run("chain", func(t *testing.T) {
 		const setMsg = "msg1"
-		inner := resperr.WithUserMessage(nil, setMsg)
+		inner := resperr.E{M: setMsg}
 		w1 := resperr.New(5, "w1: %w", inner)
 		w2 := resperr.New(6, "w2: %w", w1)
 		be.Equal(t, setMsg, resperr.UserMessage(w2))
 		be.Equal(t, 5, resperr.StatusCode(w1))
 		be.Equal(t, 6, resperr.StatusCode(w2))
-		be.Equal(t, "[6] w2: [5] w1: UserMessage<msg1>", w2.Error())
+		be.Equal(t, "[6] w2: [5] w1: [400] <msg1> Bad Request", w2.Error())
 	})
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/carlmjohnson/be"
-	"github.com/carlmjohnson/resperr"
+	"github.com/earthboundkid/resperr/v2"
 )
 
 func ExampleValidator() {

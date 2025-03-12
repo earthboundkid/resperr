@@ -45,22 +45,6 @@ func (e E) Error() string {
 
 func (e E) Unwrap() error { return e.E }
 
-func (e E) StatusCode() int {
-	if e.S != 0 {
-		return e.S
-	}
-	if e.E != nil {
-		return StatusCode(e.E)
-	}
-	return 0
-}
+func (e E) StatusCode() int { return e.S }
 
-func (e E) UserMessage() string {
-	if e.M != "" {
-		return e.M
-	}
-	if um := UserMessenger(nil); errors.As(e.E, &um) {
-		return um.UserMessage()
-	}
-	return ""
-}
+func (e E) UserMessage() string { return e.M }

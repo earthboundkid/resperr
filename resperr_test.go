@@ -27,6 +27,20 @@ func TestGetCode(t *testing.T) {
 		"set-message": {resperr.E{M: "xxx"}, 400},
 		"set-both":    {resperr.E{S: 6, M: "xx"}, 6},
 		"context":     {context.DeadlineExceeded, 504},
+		"e":           {resperr.E{}, 500},
+		"m":           {resperr.M("hi"), 400},
+		"join-code-message": {errors.Join(
+			resperr.New(404, "hi"),
+			resperr.M("hello"),
+		), 404},
+		"join-message-code": {errors.Join(
+			resperr.M("hello"),
+			resperr.New(404, "hi"),
+		), 404},
+		"join-code-ii": {errors.Join(
+			resperr.E{M: "yo"},
+			resperr.New(401, "hi"),
+		), 401},
 	}
 
 	for name, tc := range testCases {
@@ -74,6 +88,20 @@ func TestGetMsg(t *testing.T) {
 		"set":     {resperr.E{E: errors.New(""), M: "3"}, "3"},
 		"set-nil": {resperr.E{M: "4"}, "4"},
 		"wrapped": {wrapped, "5"},
+		"m":       {resperr.M("hi"), "hi"},
+		"join-code-message": {errors.Join(
+			resperr.New(404, "hi"),
+			resperr.M("hello"),
+		), "hello"},
+		"join-message-code": {errors.Join(
+			resperr.M("howdy"),
+			resperr.New(404, "hi"),
+		), "howdy"},
+		"join-code-ii": {errors.Join(
+			resperr.New(404, "hi"),
+			resperr.E{S: 401},
+			resperr.M("howdy"),
+		), "howdy"},
 	}
 
 	for name, tc := range testCases {

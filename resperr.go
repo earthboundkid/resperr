@@ -24,8 +24,10 @@ func StatusCode(err error) (code int) {
 	if err == nil {
 		return http.StatusOK
 	}
-	if sc := StatusCoder(nil); errors.As(err, &sc) {
-		return sc.StatusCode()
+	for sc := range allAs[StatusCoder](err) {
+		if code := sc.StatusCode(); code != 0 {
+			return code
+		}
 	}
 	var timeouter interface {
 		error
@@ -40,6 +42,11 @@ func StatusCode(err error) (code int) {
 	}
 	if errors.As(err, &temper) && temper.Temporary() {
 		return http.StatusServiceUnavailable
+	}
+	// If it has a non-empty UserMessage, mark it as 400
+	if um := UserMessenger(nil); errors.As(err, &um) &&
+		um.UserMessage() != "" {
+		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
 }
@@ -59,8 +66,10 @@ func UserMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	if um := UserMessenger(nil); errors.As(err, &um) {
-		return um.UserMessage()
+	for um := range allAs[UserMessenger](err) {
+		if msg := um.UserMessage(); msg != "" {
+			return msg
+		}
 	}
 	return http.StatusText(StatusCode(err))
 }
@@ -74,10 +83,27 @@ func NotFound(r *http.Request) error {
 	}
 }
 
-// New is a convenience function for calling fmt.Errorf.
+// New is a convenience function for setting a status code and calling fmt.Errorf.
 func New(code int, format string, v ...any) error {
 	return E{
 		S: code,
 		E: fmt.Errorf(format, v...),
 	}
+}
+
+// M is a convenience function for calling fmt.Sprintf for a UserMessage.
+func M(format string, v ...any) error {
+	return m{fmt.Sprintf(format, v...)}
+}
+
+type m struct {
+	m string
+}
+
+func (m m) Error() string {
+	return fmt.Sprintf("<%s>", m.m)
+}
+
+func (m m) UserMessage() string {
+	return m.m
 }

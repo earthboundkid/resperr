@@ -8,7 +8,9 @@ import (
 	"net/http"
 )
 
-// StatusCoder is an error with an associated HTTP status code
+// StatusCoder is an error with an associated HTTP status code.
+// StatusCode may return 0 to indicate that
+// the status code should be taken from another error in the chain.
 type StatusCoder interface {
 	error
 	StatusCode() int
@@ -51,7 +53,9 @@ func StatusCode(err error) (code int) {
 	return http.StatusInternalServerError
 }
 
-// UserMessenger is an error with an associated user-facing message
+// UserMessenger is an error with an associated user-facing message.
+// UserMessage may return "" to indicate that
+// the user message should be taken from another error in the chain.
 type UserMessenger interface {
 	error
 	UserMessage() string

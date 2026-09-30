@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/carlmjohnson/be"
+	"github.com/earthboundkid/assert"
 	"github.com/earthboundkid/resperr/v2"
 )
 
@@ -43,25 +43,28 @@ func ExampleValidator_AddIfUnset() {
 }
 
 func TestValidator(t *testing.T) {
+	be := assert.FailsNow(t)
 	var v1 resperr.Validator
 	v1.AddIf("heads", 2 > 1, "Two are better than one.")
 	v1.AddIf("heads", true, "I win, tails you lose.")
 	err := v1.Err()
-	be.Nonzero(t, err)
-	be.False(t, v1.Valid())
 	fields := resperr.ValidationErrors(err)
-	be.Equal(t, 1, len(fields))
-	be.Equal(t, 2, len(fields["heads"]))
-	be.Equal(t, http.StatusBadRequest, resperr.StatusCode(err))
+	be.
+		Truthy(err).
+		False(v1.Valid()).
+		EqualLength(fields, 1).
+		EqualLength(fields["heads"], 2).
+		Equal(resperr.StatusCode(err), http.StatusBadRequest)
 
 	var v2 resperr.Validator
 	v2.AddIf("heads", 2 < 1, "One is the loneliest number.")
 	v2.AddIf("heads", false, "I win, tails you lose.")
 	err = v2.Err()
-	be.True(t, v2.Valid())
-	be.NilErr(t, err)
 	fields = resperr.ValidationErrors(err)
-	be.Zero(t, fields)
+	be.
+		True(v2.Valid()).
+		NilError(err).
+		Falsey(fields)
 
 	// Don't allocate for valid messages
 	allocs := testing.AllocsPerRun(10, func() {
@@ -69,5 +72,5 @@ func TestValidator(t *testing.T) {
 		v.AddIf("field", false, "message: %d", 1)
 		err = v.Err()
 	})
-	be.Equal(t, 0, allocs)
+	be.Equal(allocs, 0)
 }
